@@ -20,6 +20,7 @@ loggedInElement = 'userPanel'
 usernameText = 'mainContent_usernameText'
 passwordText = 'mainContent_passText'
 loginButton = 'loginButton'
+loginButtonIsLinkbutton = False
 
 # Test class definition. Do not edit.
 class Test:
@@ -46,6 +47,10 @@ driver.get(loginUrl)
 driver.find_element_by_id(usernameText).send_keys(username)
 driver.find_element_by_id(passwordText).send_keys(password)
 driver.find_element_by_id(loginButton).click()
+if loginButtonIsLinkbutton:
+    driver.find_element_by_id(loginButton).send_keys(Keys.RETURN)
+else:
+    driver.find_element_by_id(loginButton).click()
 # Give the page a chance to load.
 time.sleep(3)
 # Ensure we've logged in.

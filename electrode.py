@@ -41,6 +41,7 @@ loggedInElement = 'userPanel'
 usernameText = 'mainContent_usernameText'
 passwordText = 'mainContent_passText'
 loginButton = 'loginButton'
+loginButtonIsLinkbutton = False
 # ZAP listen address:
 zap_url = '127.0.0.1:8090'
 
@@ -147,7 +148,11 @@ print 'Performing login test...'
 driver.get(loginUrl)
 driver.find_element_by_id(usernameText).send_keys(username)
 driver.find_element_by_id(passwordText).send_keys(password)
-driver.find_element_by_id(loginButton).send_keys(Keys.RETURN)
+
+if loginButtonIsLinkbutton:
+    driver.find_element_by_id(loginButton).send_keys(Keys.RETURN)
+else:
+    driver.find_element_by_id(loginButton).click()
 
 # Give the page a chance to load.
 
