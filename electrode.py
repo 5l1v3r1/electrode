@@ -7,17 +7,17 @@
 #|  __/ |  __/ (__| |_| | | (_) | (_| |  __/
 # \___|_|\___|\___|\__|_|  \___/ \__,_|\___|
 #
-#              electrode v0.1
+#              electrode v1.0
 #             by Chris Campbell
 
-# Argument 1: fully qualified log file path.
-
+import json
 import time
 import urllib
 import os
 import subprocess
 import sys
 import time
+from ConfigParser import SafeConfigParser
 from pprint import pprint
 from zapv2 import ZAPv2
 from urlparse import urlparse
@@ -25,213 +25,335 @@ from selenium import webdriver
 from selenium.webdriver.common.proxy import *
 from selenium.webdriver.common.keys import Keys
 
-# Define variables.
-# Target:
-protocol = 'https'
-target = '{}://cnwcc1a.cnw.co.nz/fooblog'.format(protocol)
-pagesToExclude = ['https://cnwcc1a.cnw.co.nz/fooblog/register.aspx',
-                  'https://cnwcc1a.cnw.co.nz/fooblog/logout.aspx',
-                  'https://cnwcc1a.cnw.co.nz/fooblog/login.aspx',
-                  'https://cnwcc1a.cnw.co.nz/fooblog/reset_pass.aspx']
-# Authentication:
-username = 'admin'
-password = 'foo'
-loginUrl = 'https://cnwcc1a.cnw.co.nz/fooblog/login.aspx'
-loggedInElement = 'userPanel'
-usernameText = 'mainContent_usernameText'
-passwordText = 'mainContent_passText'
-loginButton = 'loginButton'
-loginButtonIsLinkbutton = False
-# ZAP listen address:
-zap_url = '127.0.0.1:8090'
+parser = SafeConfigParser()
+parser.read('settings.ini')
 
-# Test class definition. Do not edit.
-class Test:
-    def __init__(self, desc, url, inputs, button):
+# Load configuration data.
+class baseObj:
+    def __init__(self, description, buildId, target, pagesToExclude):
+        self.description = description
+        self.buildId = buildId
+        self.target = target
+        self.pagesToExclude = pagesToExclude
+
+def get_base_config(parser):
+    description = parser.get('Target', 'description')
+    target = parser.get('Target', 'target')
+    pagesToExclude = parser.get('Target', 'pagesToExclude').split(',')
+
+    if len(sys.argv) > 1:
+        buildId = sys.argv[1]
+    else:
+        buildId = time.strftime("%d%m%Y-%H%M%S")
+
+    return baseObj(description, buildId, target, pagesToExclude)
+
+class authObj:
+    def __init__(self, username, password, loginUrl, loggedInElement, usernameText, passwordText, loginButton):
+        self.username = username
+        self.password = password
+        self.loginUrl = loginUrl
+        self.loggedInElement = loggedInElement
+        self.usernameText = usernameText
+        self.passwordText = passwordText
+        self.loginButton = loginButton
+
+def get_auth_details(parser):
+    username = parser.get('Auth', 'username')
+    password = parser.get('Auth', 'password')
+    loginUrl = parser.get('Auth', 'loginUrl')
+    loggedInElement = parser.get('Auth', 'loggedInElement')
+    usernameText = parser.get('Auth', 'usernameText')
+    passwordText = parser.get('Auth', 'passwordText')
+    loginButton = parser.get('Auth', 'loginButton')
+    return authObj(username, password, loginUrl, loggedInElement, usernameText, passwordText, loginButton)
+
+class testObj:
+    def __init__(self, description, url, inputs, button):
+        self.description = description
         self.url = url
-	self.desc = desc
         self.inputs = inputs
         self.button = button
-# Initialise test list.
-tests = []
 
-# Tests to run (format: 'description','url',{'form ID:' 'text','form ID:' 'text'}, {'submit button ID': 'is ASP.NET linkbutton (True/False)'}):
-tests.append(Test('Search Test', 'https://cnwcc1a.cnw.co.nz/FooBlog', {'searchText': 'espresso'}, {'submitButton': True}))
-tests.append(Test('Merchandise Test', 'https://cnwcc1a.cnw.co.nz/FooBlog/view_item.aspx?id=epmrvem7ROKUjXQJ', {'mainContent_reviewText': 'Test review.'}, {'mainContent_submitButton': True}))
-tests.append(Test('Post Test', 'https://cnwcc1a.cnw.co.nz/fooblog/view_post.aspx?id=4', {'mainContent_commentText': 'Test comment.'}, {'mainContent_submitButton': True}))
+def get_tests(parser):
+    tests = []
 
-#
-# DO NOT EDIT BELOW.
-#
+    for section in (section for section in parser.sections() if section.startswith('Test')):
+        description = parser.get(section, 'description')
+        url = parser.get(section, 'url')
+        inputs = json.loads(parser.get(section, 'inputs'))
+        button = parser.get(section, 'button')
+        tests.append(testObj(description, url, inputs, button))
 
-print 'Starting electrode...'
+    return tests
+
+class zapObj:
+    def __init__(self, url, dir, reportDir):
+        self.url = url
+        self.dir = dir
+        self.reportDir = reportDir
+
+def get_zap_details(parser):
+    url = parser.get('ZAP', 'url')
+    dir = parser.get('ZAP', 'dir')
+    reportDir = parser.get('ZAP', 'reportDir')
+    return zapObj(url, dir, reportDir)
+
+# Define proxy addresses.
+def get_proxies(zapConfig):
+    return {'http': 'http://{0}'.format(zapConfig.url),
+            'https': 'http://{0}'.format(zapConfig.url)}
 
 # Determine if ZAP is running.
-
 def is_zap_running(url, proxies):
     try:
         response = urllib.urlopen('http://zap/', proxies=proxies)
         if 'ZAP-Header' \
             in response.headers.get('Access-Control-Allow-Headers', []):
-            print 'ZAP started!'
             return True
         else:
-            message = 'Service running at {} is not ZAP'.format(url)
+            message = 'Service running at {0} is not ZAP'.format(url)
             raise Exception(message)
     except IOError:
         return False
 
-
-# Define proxy addresses.
-
-proxies = {'http': 'http://{}'.format(zap_url),
-           'https': 'http://{}'.format(zap_url)}
-
 # Start ZAP if required.
-
-if is_zap_running(zap_url, proxies) is False:
-    print 'Starting ZAP...'
-    zap_dir = 'C:\Program Files (x86)\OWASP\Zed Attack Proxy'
-    subprocess.Popen('{}\zap.bat -daemon -port 8090 -config api.disablekey=true'.format(zap_dir),
-                     cwd=zap_dir, stdout=open(os.devnull, 'w'))
-    while not is_zap_running(zap_url, proxies):
-        print 'Waiting for ZAP to start...'
-        time.sleep(10)
-else:
-    print 'ZAP is already started!'
-
-# Define ZAP object.
-
-zap = ZAPv2(proxies={'http': 'http://{}'.format(zap_url),
-            'https': 'http://{}'.format(zap_url)})
+def start_zap(zapConfig, proxies):
+    if is_zap_running(zapConfig.url, proxies) is False:
+        print 'Starting ZAP...'
+        subprocess.Popen('{0}\zap.bat -daemon -port 8090 -config api.disablekey=true'.format(zapConfig.dir),
+                         cwd=zapConfig.dir, stdout=open(os.devnull, 'w'))
+        retry = 0
+        while not is_zap_running(zapConfig.url, proxies) and retry < 6:
+            print 'Waiting for ZAP to start...'
+            time.sleep(10)
+            retry += 1
+        if is_zap_running(zapConfig.url, proxies):
+            print 'ZAP started!'
+            return True
+        else:
+            print 'Failed to start ZAP.'
+            return False
+    else:
+        print 'ZAP is already started!'
+        return True
 
 # Start new session.
-
-print 'Starting new session...'
-zap.core.new_session()
+def start_session(zap):
+    print 'Starting new session...'
+    zap.core.new_session()
 
 # Prepare context.
+def prepare_context(zap, baseConfig):
+    print 'Preparing context...'
+    p = urlparse(baseConfig.target)
+    cname = p.hostname
+    cid = zap.context.new_context(cname)
+    zap.context.set_context_in_scope(cname, True)
+    zap.context.set_context_in_scope('Default Context', False)
+    zap.context.include_in_context(cname, '\\Q\\E.*'.format(baseConfig.target))
+    for page in baseConfig.pagesToExclude:
+        zap.context.exclude_from_context(cname, '\\Q{0}\\E'.format(page))
 
-print 'Preparing context...'
-p = urlparse(target)
-cname = p.hostname
-cid = zap.context.new_context(cname)
-zap.context.set_context_in_scope(cname, True)
-zap.context.set_context_in_scope('Default Context', False)
-zap.context.include_in_context(cname, '\\Q\\E.*'.format(target))
-for page in pagesToExclude:
-    zap.context.exclude_from_context(cname, '\\Q{}\\E'.format(page))
+# Create ZAP driver.
+def create_electrode(zapConfig):
+    return ZAPv2(proxies={'http': 'http://{0}'.format(zapConfig.url),
+                'https': 'http://{0}'.format(zapConfig.url)})
+    
+# Create Selenium driver.
+def create_driver(zapConfig):
+    proxyObj = Proxy({
+        'proxyType': ProxyType.MANUAL,
+        'httpProxy': zapConfig.url,
+        'ftpProxy': zapConfig.url,
+        'sslProxy': zapConfig.url,
+        'noProxy': '',
+        })
 
-# Access target.
+    # Define Selenium driver.
+    return webdriver.Firefox(proxy=proxyObj)
 
-print 'Accessing target: ' + target
-zap.urlopen(target)
-time.sleep(2)
+# Check if element exists on page using Selenium.
+def element_exists(driver, id):
+    try:
+        driver.find_element_by_id(id)
+        return True
+    except Exception:
+        print 'Element does not exist: {0}'.format(id)
+        return False
 
-print 'Preparing auth...'
+# Determine if a button is an ASP.NET linkbutton or not.
+def is_asp_linkbutton(driver, id):
+    try:
+        attribute = driver.find_element_by_id(id).get_attribute("href")
+        # Regular HTML buttons will fail here.
+        if attribute:
+            return True
+        else:
+            return False
+    except Exception:
+        return False
 
-proxyObj = Proxy({
-    'proxyType': ProxyType.MANUAL,
-    'httpProxy': zap_url,
-    'ftpProxy': zap_url,
-    'sslProxy': zap_url,
-    'noProxy': '',
-    })
+# Access the target and log in.
+def prepare_scan(zap, driver, baseConfig, authConfig):
+    # Access target.
+    print 'Accessing target: {0}'.format(baseConfig.target)
+    zap.urlopen(baseConfig.target)
+    driver.get(baseConfig.target)
+    # Give the new page a chance to load.
+    time.sleep(2)
 
-# Define Selenium driver.
-
-driver = webdriver.Firefox(proxy=proxyObj)
-
-# Log in to site.
-
-print 'Performing login test...'
-driver.get(loginUrl)
-driver.find_element_by_id(usernameText).send_keys(username)
-driver.find_element_by_id(passwordText).send_keys(password)
-
-if loginButtonIsLinkbutton:
-    driver.find_element_by_id(loginButton).send_keys(Keys.RETURN)
-else:
-    driver.find_element_by_id(loginButton).click()
-
-# Give the page a chance to load.
-
-time.sleep(3)
-
-# Ensure we've logged in.
-
-loggedIn = driver.find_element_by_id(loggedInElement)
-print 'Login OK!'
-
-# Perform tests.
-
-# Perform tests.
-for test in tests:
-    print 'Performing test: {}'.format(test.desc)
-    driver.get(test.url)
-    for form, text in test.inputs.iteritems():
-        driver.find_element_by_id(form).send_keys(text)
-    if test.button.values()[0]:
-        driver.find_element_by_id(test.button.keys()[0]).send_keys(Keys.RETURN)
+    # Log in to site.
+    print 'Performing login...'
+    driver.get(authConfig.loginUrl)
+    # Give the new page a chance to load.
+    time.sleep(2)
+    if element_exists(driver, authConfig.usernameText):
+        driver.find_element_by_id(authConfig.usernameText).send_keys(authConfig.username)
     else:
-        driver.find_element_by_id(test.button.keys()[0]).click()
-    time.sleep(3)
+        return False
+    if element_exists(driver, authConfig.passwordText):
+        driver.find_element_by_id(authConfig.passwordText).send_keys(authConfig.password)
+    else:
+        return False
 
-# Spider target.
+    if element_exists(driver, authConfig.loginButton):
+        if is_asp_linkbutton(driver, authConfig.loginButton):
+            print 'Clicking linkbutton.'
+            driver.find_element_by_id(authConfig.loginButton).send_keys(Keys.RETURN)
+        else:
+            print 'Clicking button.'
+            driver.find_element_by_id(authConfig.loginButton).click()
 
-print 'Spidering target: {}'.format(target)
-zap.spider.set_option_scope_string(target)
-zap.spider.set_option_max_depth(10)
-zap.spider.set_option_thread_count(3)
-spider = zap.spider.scan(target, 0)
+        # Give the new page a chance to load.
+        time.sleep(2)
 
-# Give the spider a chance to start
+        # Ensure we've logged in.
+        if element_exists(driver, authConfig.loggedInElement):
+            print 'Login OK!'
+            return True
+        else:
+            print 'Login failed.'
+            return False
+    else:
+        return False
 
-time.sleep(5)
+# Perform the Selenium tests to derive the ZAP tests from.
+def selenium_tests(driver, testConfig):
+    # Perform tests.
+    for test in testConfig:
+        print 'Performing test: {0} ({1})'.format(test.description, test.url)
+        driver.get(test.url)
+        # Give the new page a chance to load.
+        time.sleep(2)
+        for input in test.inputs:
+            for form, text in input.iteritems():
+                if element_exists(driver, form):
+                    driver.find_element_by_id(form).send_keys(text)
+                else:
+                    return False
+        if element_exists(driver, test.button):
+            if is_asp_linkbutton(driver, test.button):
+                driver.find_element_by_id(test.button).send_keys(Keys.RETURN)
+            else:
+                driver.find_element_by_id(test.button).click()
+            # Wait a moment before the next test.
+            time.sleep(1)
+        else:
+            return False
+    return True
+        
 
-while int(zap.spider.status()) < 100:
-    print 'Spider progress: {}%'.format(zap.spider.status())
+# Spider the target to build up a sitemap.
+def spider_target(zap, baseConfig):
+    # Spider target.
+    print 'Spidering target: {0}'.format(baseConfig.target)
+    zap.spider.set_option_scope_string(baseConfig.target)
+    zap.spider.set_option_max_depth(10)
+    zap.spider.set_option_thread_count(3)
+    spider = zap.spider.scan(baseConfig.target, 0)
+
+    # Give the spider a chance to start.
     time.sleep(5)
-print 'Spider completed!'
 
-# Wait for passive scan to complete.
+    while int(zap.spider.status()) < 100:
+        print 'Spider progress: {0}%'.format(zap.spider.status())
+        time.sleep(5)
+    print 'Spider completed!'
 
-print 'Waiting for passive scan...'
-print 'Records to scan: {}'.format(zap.pscan.records_to_scan)
-while int(zap.pscan.records_to_scan) > 0:
+# Passively scan the target.
+def passive_scan(zap):
+    # Wait for passive scan to complete.
+    print 'Waiting for passive scan...'
+    print 'Records to scan: {0}'.format(zap.pscan.records_to_scan)
+    while int(zap.pscan.records_to_scan) > 0:
+        time.sleep(5) # throttle iterations.
+        print 'Records to scan: {0}'.format(zap.pscan.records_to_scan)
+    print 'Passive scanning complete!'
+
+# Main vulnerability testing.
+def active_scan(zap, baseConfig):
+    # Start active scan.
+    print 'Scanning target: {0}'.format(baseConfig.target)
+    zap.ascan.set_option_thread_per_host(3)
+
+    # 1 - URL Query String
+    # 2 - POST Data
+    # 4 - HTTP Headers
+    # 8 - Cookie Data
+    # 16 - URL Path
+
+    zap.ascan.set_option_target_params_injectable(3)
+    ascan = zap.ascan.scan(baseConfig.target, recurse=True)
     time.sleep(5)
-    print 'Records to scan: {}'.format(zap.pscan.records_to_scan)
-print 'Passive scanning complete!'
+    while int(zap.ascan.status()) < 100:
+        time.sleep(5) # throttle iterations.
+        print 'Scan progress: {0}%'.format(zap.ascan.status())
+    print 'Scan completed!'
 
-# Start active scan.
+# Produce the HTML report.
+def report_results(zap, baseConfig, zapConfig):
+    # Report the results
+    print 'Writing report...'
+    reportFilename = '{0}-zap_report-{1}.html'.format(baseConfig.description, baseConfig.buildId)
+    reportPath = os.path.join(zapConfig.reportDir, reportFilename)
+    file = open(reportPath, 'w')
+    html = zap.core.htmlreport()
+    file.write(html)
+    file.close()
+    print 'Report written to: {0}'.format(reportPath)
 
-print 'Scanning target: {}'.format(target)
-zap.ascan.set_option_thread_per_host(3)
+# Shut down ZAP.
+def discharge(zap):
+    # Shutdown ZAP
+    print 'Discharging the electrode...'
+    zap.core.shutdown()
 
-# 1 - URL Query String
-# 2 - POST Data
-# 4 - HTTP Headers
-# 8 - Cookie Data
-# 16 - URL Path
+# Define workflow:
+print 'Loading configuration...'
+baseConfig = get_base_config(parser)
+authConfig = get_auth_details(parser)
+testConfig = get_tests(parser)
+zapConfig = get_zap_details(parser)
 
-zap.ascan.set_option_target_params_injectable(3)
-ascan = zap.ascan.scan(target, recurse=True)
-time.sleep(5)
-while int(zap.ascan.status()) < 100:
-    print 'Scan progress: {}%'.format(zap.ascan.status())
-    time.sleep(5)
-print 'Scan completed!'
+print 'Starting electrode...'
+proxies = get_proxies(zapConfig)
+zapStarted = start_zap(zapConfig, proxies)
 
-# Report the results
+if zapStarted:
+    zap = create_electrode(zapConfig)
+    start_session(zap)
+    prepare_context(zap, baseConfig)
+    driver = create_driver(zapConfig)
+    preflightOk = prepare_scan(zap, driver, baseConfig, authConfig)
 
-print 'Discharging the electrode...'
-report_file = sys.argv[1]
-file = open(report_file, 'w')
-html = zap.core.htmlreport()
-file.write(html)
-file.close()
-print 'Report written to: {}'.format(report_file)
+    if preflightOk:
+        testsOk = selenium_tests(driver, testConfig)
+        if testsOk:
+            spider_target(zap, baseConfig)
+            passive_scan(zap)
+            active_scan(zap, baseConfig)
+            report_results(zap, baseConfig, zapConfig)
+            discharge(zap)
 
-# Shutdown ZAP
-
-zap.core.shutdown()
+print 'Run complete.'
