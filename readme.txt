@@ -4,18 +4,22 @@
 |  __/ |  __/ (__| |_| | | (_) | (_| |  __/
  \___|_|\___|\___|\__|_|  \___/ \__,_|\___|
  
-               electrode v1.0
-              by Chris Campbell 
+              electrode v1.0.1
+              by Chris Campbell
+              Twitter: @t0x0_nz			  
 	      
 About
 """""
 electrode is a Python script that automates security testing of applications. Selenium is used to log in to an application and execute key actions that will guide the subsequent ZAP Spider and Active Scan.
+
+Sample Screenshot: http://iforce.co.nz/i/uskdeeo1.mco.png
 
 
 Version History
 """""""""""""""
 0.1 - 21/1/16 - Initial release for OWASP NZ Day 2016 demonstration.
 1.0 - 12/8/16 - Migration from PoC form.
+1.0.1 - 12/8/16 - Removed redundant debugging outputs. Variablised listen port. Fixed Selenium button location bug.
 
 
 Requirements
@@ -46,7 +50,7 @@ passwordText=<ID of password textbox>
 loginButton=<ID of submit/login button>
 
 [ZAP]
-url=<ip:port definition of ZAP, e.g. 127.0.0.1:8090>
+port=<port ZAP will listen on>
 dir=<installation directory of ZAP>
 reportDir=<directory to write report to>
 
@@ -89,3 +93,8 @@ If running electrode as part of CI, it is advised that you compliment electrode 
 python C:\Python27\Scripts\sqlmap\sqlmap.py -v 2 --url="https://example.com/view_post.aspx?id=4" --user-agent=SQLMAP --delay=1 --timeout=15 --retries=2 --keep-alive --threads=10 --eta --batch --dbms=PostgreSQL --os=Windows --level=5 --risk=3 --banner --is-dba --dbs --tables --technique=BEUST -s C:\temp\can_report.txt --flush-session -t C:\temp\scan_trace.txt --fresh-queries > c:\temp\sqlmap_example-build-%BUILD_ID%.log
 
 You are also able to define the root of your site as --url and add --crawl - however this will significantly blow out the duration of your scan.
+
+
+To Do
+"""""
+- Handle more element types (checkbox, etc).

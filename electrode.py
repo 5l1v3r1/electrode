@@ -7,7 +7,7 @@
 #|  __/ |  __/ (__| |_| | | (_) | (_| |  __/
 # \___|_|\___|\___|\__|_|  \___/ \__,_|\___|
 #
-#              electrode v1.0
+#              electrode v1.0.1
 #             by Chris Campbell
 
 import json
@@ -88,16 +88,18 @@ def get_tests(parser):
     return tests
 
 class zapObj:
-    def __init__(self, url, dir, reportDir):
+    def __init__(self, port, url, dir, reportDir):
+        self.port = port
         self.url = url
         self.dir = dir
         self.reportDir = reportDir
 
 def get_zap_details(parser):
-    url = parser.get('ZAP', 'url')
+    port = parser.get('ZAP', 'port')
+    url = '127.0.0.1:{0}'.format(port)
     dir = parser.get('ZAP', 'dir')
     reportDir = parser.get('ZAP', 'reportDir')
-    return zapObj(url, dir, reportDir)
+    return zapObj(port, url, dir, reportDir)
 
 # Define proxy addresses.
 def get_proxies(zapConfig):
@@ -121,7 +123,7 @@ def is_zap_running(url, proxies):
 def start_zap(zapConfig, proxies):
     if is_zap_running(zapConfig.url, proxies) is False:
         print 'Starting ZAP...'
-        subprocess.Popen('{0}\zap.bat -daemon -port 8090 -config api.disablekey=true'.format(zapConfig.dir),
+        subprocess.Popen('{0}\zap.bat -daemon -port {1} -config api.disablekey=true'.format(zapConfig.dir, zapConfig.port),
                          cwd=zapConfig.dir, stdout=open(os.devnull, 'w'))
         retry = 0
         while not is_zap_running(zapConfig.url, proxies) and retry < 6:
@@ -182,24 +184,14 @@ def element_exists(driver, id):
         print 'Element does not exist: {0}'.format(id)
         return False
 
-# Determine if a button is an ASP.NET linkbutton or not.
-def is_asp_linkbutton(driver, id):
-    try:
-        attribute = driver.find_element_by_id(id).get_attribute("href")
-        # Regular HTML buttons will fail here.
-        if attribute:
-            return True
-        else:
-            return False
-    except Exception:
-        return False
-
 # Access the target and log in.
 def prepare_scan(zap, driver, baseConfig, authConfig):
     # Access target.
     print 'Accessing target: {0}'.format(baseConfig.target)
     zap.urlopen(baseConfig.target)
     driver.get(baseConfig.target)
+    # Maximise window to avoid invalid element locations.
+    driver.maximize_window()
     # Give the new page a chance to load.
     time.sleep(2)
 
@@ -218,15 +210,11 @@ def prepare_scan(zap, driver, baseConfig, authConfig):
         return False
 
     if element_exists(driver, authConfig.loginButton):
-        if is_asp_linkbutton(driver, authConfig.loginButton):
-            print 'Clicking linkbutton.'
-            driver.find_element_by_id(authConfig.loginButton).send_keys(Keys.RETURN)
-        else:
-            print 'Clicking button.'
-            driver.find_element_by_id(authConfig.loginButton).click()
-
-        # Give the new page a chance to load.
-        time.sleep(2)
+        element = driver.find_element_by_id(authConfig.loginButton)
+        driver.execute_script("arguments[0].click();", element)
+        
+        # Give the login a chance to complete.
+        time.sleep(5)
 
         # Ensure we've logged in.
         if element_exists(driver, authConfig.loggedInElement):
@@ -253,10 +241,8 @@ def selenium_tests(driver, testConfig):
                 else:
                     return False
         if element_exists(driver, test.button):
-            if is_asp_linkbutton(driver, test.button):
-                driver.find_element_by_id(test.button).send_keys(Keys.RETURN)
-            else:
-                driver.find_element_by_id(test.button).click()
+            element = driver.find_element_by_id(test.button)
+            driver.execute_script("arguments[0].click();", element)
             # Wait a moment before the next test.
             time.sleep(1)
         else:
