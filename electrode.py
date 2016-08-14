@@ -7,8 +7,9 @@
 #|  __/ |  __/ (__| |_| | | (_) | (_| |  __/
 # \___|_|\___|\___|\__|_|  \___/ \__,_|\___|
 #
-#              electrode v1.0.1
+#              electrode v1.0.2
 #             by Chris Campbell
+#             Twitter: @t0x0_nz	
 
 import json
 import time
@@ -69,10 +70,11 @@ def get_auth_details(parser):
     return authObj(username, password, loginUrl, loggedInElement, usernameText, passwordText, loginButton)
 
 class testObj:
-    def __init__(self, description, url, inputs, button):
+    def __init__(self, description, url, inputs, toggles, button):
         self.description = description
         self.url = url
         self.inputs = inputs
+        self.toggles = toggles
         self.button = button
 
 def get_tests(parser):
@@ -82,8 +84,12 @@ def get_tests(parser):
         description = parser.get(section, 'description')
         url = parser.get(section, 'url')
         inputs = json.loads(parser.get(section, 'inputs'))
+        toggles = parser.get(section, 'toggles').split(',')
         button = parser.get(section, 'button')
-        tests.append(testObj(description, url, inputs, button))
+        tests.append(testObj(description, url, inputs, toggles, button))
+        # Handle empty entries.
+        inputs = filter(None, inputs)
+        toggles = filter(None, toggles)
 
     return tests
 
@@ -234,10 +240,18 @@ def selenium_tests(driver, testConfig):
         driver.get(test.url)
         # Give the new page a chance to load.
         time.sleep(2)
-        for input in test.inputs:
-            for form, text in input.iteritems():
+        if len(test.inputs) > 0:
+            for input in test.inputs:
+                for form, text in input.iteritems():
+                    if element_exists(driver, form):
+                        driver.find_element_by_id(form).send_keys(text)
+                    else:
+                        return False
+        if len(test.toggles) > 0:
+            for form in test.toggles:
                 if element_exists(driver, form):
-                    driver.find_element_by_id(form).send_keys(text)
+                    element = driver.find_element_by_id(form)
+                    driver.execute_script("arguments[0].click();", element)
                 else:
                     return False
         if element_exists(driver, test.button):

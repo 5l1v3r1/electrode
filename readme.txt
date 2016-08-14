@@ -4,7 +4,7 @@
 |  __/ |  __/ (__| |_| | | (_) | (_| |  __/
  \___|_|\___|\___|\__|_|  \___/ \__,_|\___|
  
-              electrode v1.0.1
+              electrode v1.0.2
               by Chris Campbell
               Twitter: @t0x0_nz			  
 	      
@@ -20,6 +20,12 @@ Version History
 0.1 - 21/1/16 - Initial release for OWASP NZ Day 2016 demonstration.
 1.0 - 12/8/16 - Migration from PoC form.
 1.0.1 - 12/8/16 - Removed redundant debugging outputs. Variablised listen port. Fixed Selenium button location bug.
+1.0.2 - 15/8/16 - Checkbox interaction added.
+
+
+License
+"""""""
+Refer to the bundled license.txt for license details.
 
 
 Requirements
@@ -59,20 +65,24 @@ Obviously, exclude the angled brackets.
 As the configuration file is read as a dictionary, each test must be given a unique section name, e.g. Test1 and Test2:
 
 [Test1]
-description=Search Test
+description=Example Test 1
 url=https://example.com/FooBlog
-inputs=[{"searchText":"espresso","searchText":"machine"}]
+inputs=[{"exampleText":"example","sampleText":"sample"}]
+toggles=
 button=submitButton
 
-This will name the test 'Search Test' (for logging purposes), browse to 'https://example.com/FooBlog', enter 'espresso' in 'searchText' and then 'machine' into 'searchText'. It will be submitted using the button 'submitButton'.
+This will name the test 'Example Test 1' (for logging purposes), browse to 'https://example.com/FooBlog', enter 'example' in 'exampleText' and then 'sample' into 'sampleText', and not make any checkbox interactions. It will be submitted using the button 'submitButton'.
 
 [Test2]
-description=Merchandise Test
-url=https://example.com/FooBlog/view_item.aspx?id=epmrvem7ROKUjXQJ
-inputs=[{"mainContent_reviewText":"Test review."}]
+description=Example Test 2
+url=https://example/fooblog/view_post.aspx?id=666
+inputs=[{"mainContent_exampleText":"example"}]
+toggles=subCheck,okCheck
 button=mainContent_submitButton
 
-This will name the test 'Merchandise Test' (for logging purposes), browse to 'https://example.com/FooBlog/view_item.aspx?id=epmrvem7ROKUjXQJ' and enter Test review.' in 'mainContent_reviewText'. It will be submitted using the button 'mainContent_submitButton'.
+This will name the test 'Example Test 2' (for logging purposes), browse to 'https://example/fooblog/view_post.aspx?id=666', enter 'example' in 'mainContent_exampleText', and check both subCheck and okCheck checkboxes. It will be submitted using the button 'mainContent_submitButton'.
+
+Note: the above examples will not work with FooBl0g. The bundled settings.ini file will work perfectly.
 
 
 Operation
@@ -93,6 +103,13 @@ If running electrode as part of CI, it is advised that you compliment electrode 
 python C:\Python27\Scripts\sqlmap\sqlmap.py -v 2 --url="https://example.com/view_post.aspx?id=4" --user-agent=SQLMAP --delay=1 --timeout=15 --retries=2 --keep-alive --threads=10 --eta --batch --dbms=PostgreSQL --os=Windows --level=5 --risk=3 --banner --is-dba --dbs --tables --technique=BEUST -s C:\temp\can_report.txt --flush-session -t C:\temp\scan_trace.txt --fresh-queries > c:\temp\sqlmap_example-build-%BUILD_ID%.log
 
 You are also able to define the root of your site as --url and add --crawl - however this will significantly blow out the duration of your scan.
+
+
+dependency check
+""""""""""""""""
+It is also advised to use the OWASP Dependency Check plugin for Jenkins. The plugin analyses project dependences, and reports on any known, publicly disclosed vulnerabilities for them:
+
+https://wiki.jenkins-ci.org/display/JENKINS/OWASP+Dependency-Check+Plugin
 
 
 To Do
