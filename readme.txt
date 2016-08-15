@@ -4,7 +4,7 @@
 |  __/ |  __/ (__| |_| | | (_) | (_| |  __/
  \___|_|\___|\___|\__|_|  \___/ \__,_|\___|
  
-              electrode v1.0.2
+              electrode v1.0.3
               by Chris Campbell
               Twitter: @t0x0_nz			  
 	      
@@ -21,6 +21,7 @@ Version History
 1.0 - 12/8/16 - Migration from PoC form.
 1.0.1 - 12/8/16 - Removed redundant debugging outputs. Variablised listen port. Fixed Selenium button location bug.
 1.0.2 - 15/8/16 - Checkbox interaction added.
+1.0.3 - 15/8/16 - Configurable injection mode, thread count and depth.
 
 
 License
@@ -45,6 +46,14 @@ First, complete the settings.ini file (example one provided for FooBl0g):
 description=<description of app/test>
 target=<base URL of website>
 pagesToExclude=<comma separated list of URL's to exclude>
+# 1 - URL Query String
+# 2 - POST Data
+# 4 - HTTP Headers
+# 8 - Cookie Data
+# 16 - URL Path
+injectMode=<integer referring to injection mode, derived from combination of above options, e.g. query string + POST data = 3>
+depth=<depth of spider>
+threads=<number of scan and spider threads>
 
 [Auth]
 username=<username>
@@ -105,7 +114,7 @@ python C:\Python27\Scripts\sqlmap\sqlmap.py -v 2 --url="https://example.com/view
 You are also able to define the root of your site as --url and add --crawl - however this will significantly blow out the duration of your scan.
 
 
-dependency check
+Dependency Check
 """"""""""""""""
 It is also advised to use the OWASP Dependency Check plugin for Jenkins. The plugin analyses project dependences, and reports on any known, publicly disclosed vulnerabilities for them:
 

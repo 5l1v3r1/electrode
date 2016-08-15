@@ -7,7 +7,7 @@
 #|  __/ |  __/ (__| |_| | | (_) | (_| |  __/
 # \___|_|\___|\___|\__|_|  \___/ \__,_|\___|
 #
-#              electrode v1.0.2
+#              electrode v1.0.3
 #             by Chris Campbell
 #             Twitter: @t0x0_nz	
 
@@ -26,28 +26,30 @@ from selenium import webdriver
 from selenium.webdriver.common.proxy import *
 from selenium.webdriver.common.keys import Keys
 
-parser = SafeConfigParser()
-parser.read('settings.ini')
-
-# Load configuration data.
 class baseObj:
-    def __init__(self, description, buildId, target, pagesToExclude):
+    def __init__(self, description, buildId, target, pagesToExclude, injectMode, depth, threads):
         self.description = description
         self.buildId = buildId
         self.target = target
         self.pagesToExclude = pagesToExclude
+        self.injectMode = injectMode
+        self.depth = depth
+        self.threads = threads
 
 def get_base_config(parser):
     description = parser.get('Target', 'description')
     target = parser.get('Target', 'target')
     pagesToExclude = parser.get('Target', 'pagesToExclude').split(',')
+    injectMode = int(parser.get('Target', 'injectMode'))
+    depth = int(parser.get('Target', 'depth'))
+    threads = int(parser.get('Target', 'threads'))
 
     if len(sys.argv) > 1:
         buildId = sys.argv[1]
     else:
         buildId = time.strftime("%d%m%Y-%H%M%S")
 
-    return baseObj(description, buildId, target, pagesToExclude)
+    return baseObj(description, buildId, target, pagesToExclude, injectMode, depth, threads)
 
 class authObj:
     def __init__(self, username, password, loginUrl, loggedInElement, usernameText, passwordText, loginButton):
@@ -84,12 +86,11 @@ def get_tests(parser):
         description = parser.get(section, 'description')
         url = parser.get(section, 'url')
         inputs = json.loads(parser.get(section, 'inputs'))
+        inputs = filter(None, inputs)
         toggles = parser.get(section, 'toggles').split(',')
+        toggles = filter(None, toggles)
         button = parser.get(section, 'button')
         tests.append(testObj(description, url, inputs, toggles, button))
-        # Handle empty entries.
-        inputs = filter(None, inputs)
-        toggles = filter(None, toggles)
 
     return tests
 
@@ -269,8 +270,8 @@ def spider_target(zap, baseConfig):
     # Spider target.
     print 'Spidering target: {0}'.format(baseConfig.target)
     zap.spider.set_option_scope_string(baseConfig.target)
-    zap.spider.set_option_max_depth(10)
-    zap.spider.set_option_thread_count(3)
+    zap.spider.set_option_max_depth(baseConfig.depth)
+    zap.spider.set_option_thread_count(baseConfig.threads)
     spider = zap.spider.scan(baseConfig.target, 0)
 
     # Give the spider a chance to start.
@@ -295,15 +296,8 @@ def passive_scan(zap):
 def active_scan(zap, baseConfig):
     # Start active scan.
     print 'Scanning target: {0}'.format(baseConfig.target)
-    zap.ascan.set_option_thread_per_host(3)
-
-    # 1 - URL Query String
-    # 2 - POST Data
-    # 4 - HTTP Headers
-    # 8 - Cookie Data
-    # 16 - URL Path
-
-    zap.ascan.set_option_target_params_injectable(3)
+    zap.ascan.set_option_thread_per_host(baseConfig.threads)
+    zap.ascan.set_option_target_params_injectable(baseConfig.injectMode)
     ascan = zap.ascan.scan(baseConfig.target, recurse=True)
     time.sleep(5)
     while int(zap.ascan.status()) < 100:
@@ -317,10 +311,9 @@ def report_results(zap, baseConfig, zapConfig):
     print 'Writing report...'
     reportFilename = '{0}-zap_report-{1}.html'.format(baseConfig.description, baseConfig.buildId)
     reportPath = os.path.join(zapConfig.reportDir, reportFilename)
-    file = open(reportPath, 'w')
     html = zap.core.htmlreport()
-    file.write(html)
-    file.close()
+    with open(reportPath, 'w') as file:
+        file.write(html)
     print 'Report written to: {0}'.format(reportPath)
 
 # Shut down ZAP.
@@ -331,6 +324,8 @@ def discharge(zap):
 
 # Define workflow:
 print 'Loading configuration...'
+parser = SafeConfigParser()
+parser.read('settings.ini')
 baseConfig = get_base_config(parser)
 authConfig = get_auth_details(parser)
 testConfig = get_tests(parser)
