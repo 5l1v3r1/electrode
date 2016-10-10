@@ -41,7 +41,7 @@ class zapObj:
         self.dir = dir
         self.reportDir = reportDir
 
-def get_base_config(parser):
+def getBaseConfig(parser):
     description = parser.get('Target', 'description')
     target = parser.get('Target', 'target')
     pagesToExclude = parser.get('Target', 'pagesToExclude').split(',')
@@ -56,7 +56,7 @@ def get_base_config(parser):
 
     return baseObj(description, buildId, target, pagesToExclude, injectMode, depth, threads)
 
-def get_auth_details(parser):
+def getAuthDetails(parser):
     username = parser.get('Auth', 'username')
     password = parser.get('Auth', 'password')
     loginUrl = parser.get('Auth', 'loginUrl')
@@ -66,7 +66,7 @@ def get_auth_details(parser):
     loginButton = parser.get('Auth', 'loginButton')
     return authObj(username, password, loginUrl, loggedInElement, usernameText, passwordText, loginButton)
 
-def get_tests(parser):
+def getTests(parser):
     tests = []
 
     for section in (section for section in parser.sections() if section.startswith('Test')):
@@ -81,7 +81,7 @@ def get_tests(parser):
 
     return tests
 
-def get_zap_details(parser):
+def getZapDetails(parser):
     port = parser.get('ZAP', 'port')
     url = '127.0.0.1:{0}'.format(port)
     dir = parser.get('ZAP', 'dir')
@@ -89,6 +89,6 @@ def get_zap_details(parser):
     return zapObj(port, url, dir, reportDir)
 
 # Define proxy addresses.
-def get_proxies(zapConfig):
+def getProxies(zapConfig):
     return {'http': 'http://{0}'.format(zapConfig.url),
             'https': 'http://{0}'.format(zapConfig.url)}

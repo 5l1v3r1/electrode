@@ -23,29 +23,29 @@ def main():
     parser = SafeConfigParser()
     pwd = os.path.dirname(os.path.realpath(__file__))
     parser.read(os.path.join(pwd, 'config', 'settings.conf'))
-    baseConfig = get_base_config(parser)
-    authConfig = get_auth_details(parser)
-    testConfig = get_tests(parser)
-    zapConfig = get_zap_details(parser)
+    baseConfig = getBaseConfig(parser)
+    authConfig = getAuthDetails(parser)
+    testConfig = getTests(parser)
+    zapConfig = getZapDetails(parser)
 
     print 'Starting electrode...'
-    proxies = get_proxies(zapConfig)
-    zapStarted = start_zap(zapConfig, proxies)
+    proxies = getProxies(zapConfig)
+    zapStarted = startZap(zapConfig, proxies)
 
     if zapStarted:
-        zap = create_electrode(zapConfig)
-        start_session(zap)
-        prepare_context(zap, baseConfig)
-        driver = create_driver(zapConfig)
-        preflightOk = prepare_scan(zap, driver, baseConfig, authConfig)
+        zap = createElectrode(zapConfig)
+        startSession(zap)
+        prepareContext(zap, baseConfig)
+        driver = createDriver(zapConfig)
+        preflightOk = prepareScan(zap, driver, baseConfig, authConfig)
 
         if preflightOk:
-            testsOk = selenium_tests(driver, testConfig)
+            testsOk = seleniumTests(driver, testConfig)
             if testsOk:
-                spider_target(zap, baseConfig)
-                passive_scan(zap)
-                active_scan(zap, baseConfig)
-                report_results(zap, baseConfig, zapConfig)
+                spiderTarget(zap, baseConfig)
+                passiveScan(zap)
+                activeScan(zap, baseConfig)
+                reportResults(zap, baseConfig, zapConfig)
                 discharge(zap)
 
     print 'Run complete.'

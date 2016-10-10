@@ -4,7 +4,7 @@
 import os
 
 # Produce the HTML report.
-def report_results(zap, baseConfig, zapConfig):
+def reportResults(zap, baseConfig, zapConfig):
     # Report the results
     print 'Writing report...'
     reportFilename = '{0}-zap_report-{1}.html'.format(baseConfig.description, baseConfig.buildId)

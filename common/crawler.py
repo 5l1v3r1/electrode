@@ -6,7 +6,7 @@ from selenium.webdriver.common.proxy import *
 from selenium.webdriver.common.keys import Keys
 
 # Create Selenium driver.
-def create_driver(zapConfig):
+def createDriver(zapConfig):
     proxyObj = Proxy({
         'proxyType': ProxyType.MANUAL,
         'httpProxy': zapConfig.url,
@@ -19,7 +19,7 @@ def create_driver(zapConfig):
     return webdriver.Firefox(proxy=proxyObj)
 
 # Perform the Selenium tests to derive the ZAP tests from.
-def selenium_tests(driver, testConfig):
+def seleniumTests(driver, testConfig):
     # Perform tests.
     for test in testConfig:
         print 'Performing test: {0} ({1})'.format(test.description, test.url)
@@ -29,18 +29,18 @@ def selenium_tests(driver, testConfig):
         if len(test.inputs) > 0:
             for input in test.inputs:
                 for form, text in input.iteritems():
-                    if element_exists(driver, form):
+                    if elementExists(driver, form):
                         driver.find_element_by_id(form).send_keys(text)
                     else:
                         return False
         if len(test.toggles) > 0:
             for form in test.toggles:
-                if element_exists(driver, form):
+                if elementExists(driver, form):
                     element = driver.find_element_by_id(form)
                     driver.execute_script("arguments[0].click();", element)
                 else:
                     return False
-        if element_exists(driver, test.button):
+        if elementExists(driver, test.button):
             element = driver.find_element_by_id(test.button)
             driver.execute_script("arguments[0].click();", element)
             # Wait a moment before the next test.
@@ -50,7 +50,7 @@ def selenium_tests(driver, testConfig):
     return True
 
 # Check if element exists on page using Selenium.
-def element_exists(driver, id):
+def elementExists(driver, id):
     try:
         driver.find_element_by_id(id)
         return True

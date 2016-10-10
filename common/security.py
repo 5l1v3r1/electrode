@@ -9,7 +9,7 @@ import time
 import urllib
 
 # Determine if ZAP is running.
-def is_zap_running(url, proxies):
+def isZapRunning(url, proxies):
     try:
         response = urllib.urlopen('http://zap/', proxies=proxies)
         if 'ZAP-Header' \
@@ -22,17 +22,17 @@ def is_zap_running(url, proxies):
         return False
 
 # Start ZAP if required.
-def start_zap(zapConfig, proxies):
-    if is_zap_running(zapConfig.url, proxies) is False:
+def startZap(zapConfig, proxies):
+    if isZapRunning(zapConfig.url, proxies) is False:
         print 'Starting ZAP...'
         subprocess.Popen('{0}\zap.bat -daemon -port {1} -config api.disablekey=true'.format(zapConfig.dir, zapConfig.port),
                          cwd=zapConfig.dir, stdout=open(os.devnull, 'w'))
         retry = 0
-        while not is_zap_running(zapConfig.url, proxies) and retry < 6:
+        while not isZapRunning(zapConfig.url, proxies) and retry < 6:
             print 'Waiting for ZAP to start...'
             time.sleep(10)
             retry += 1
-        if is_zap_running(zapConfig.url, proxies):
+        if isZapRunning(zapConfig.url, proxies):
             print 'ZAP started!'
             return True
         else:
@@ -43,12 +43,12 @@ def start_zap(zapConfig, proxies):
         return True
 
 # Start new session.
-def start_session(zap):
+def startSession(zap):
     print 'Starting new session...'
     zap.core.new_session()
 
 # Prepare context.
-def prepare_context(zap, baseConfig):
+def prepareContext(zap, baseConfig):
     print 'Preparing context...'
     p = urlparse(baseConfig.target)
     cname = p.hostname
@@ -60,12 +60,12 @@ def prepare_context(zap, baseConfig):
         zap.context.exclude_from_context(cname, '\\Q{0}\\E'.format(page))
 
 # Create ZAP driver.
-def create_electrode(zapConfig):
+def createElectrode(zapConfig):
     return ZAPv2(proxies={'http': 'http://{0}'.format(zapConfig.url),
                 'https': 'http://{0}'.format(zapConfig.url)})
     
 # Access the target and log in.
-def prepare_scan(zap, driver, baseConfig, authConfig):
+def prepareScan(zap, driver, baseConfig, authConfig):
     # Access target.
     print 'Accessing target: {0}'.format(baseConfig.target)
     zap.urlopen(baseConfig.target)
@@ -107,7 +107,7 @@ def prepare_scan(zap, driver, baseConfig, authConfig):
         return False
 
 # Spider the target to build up a sitemap.
-def spider_target(zap, baseConfig):
+def spiderTarget(zap, baseConfig):
     # Spider target.
     print 'Spidering target: {0}'.format(baseConfig.target)
     zap.spider.set_option_scope_string(baseConfig.target)
@@ -124,7 +124,7 @@ def spider_target(zap, baseConfig):
     print 'Spider completed!'
 
 # Passively scan the target.
-def passive_scan(zap):
+def passiveScan(zap):
     # Wait for passive scan to complete.
     print 'Waiting for passive scan...'
     print 'Records to scan: {0}'.format(zap.pscan.records_to_scan)
@@ -134,7 +134,7 @@ def passive_scan(zap):
     print 'Passive scanning complete!'
 
 # Main vulnerability testing.
-def active_scan(zap, baseConfig):
+def activeScan(zap, baseConfig):
     # Start active scan.
     print 'Scanning target: {0}'.format(baseConfig.target)
     zap.ascan.set_option_thread_per_host(baseConfig.threads)
