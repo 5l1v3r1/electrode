@@ -4,7 +4,7 @@
 |  __/ |  __/ (__| |_| | | (_) | (_| |  __/
  \___|_|\___|\___|\__|_|  \___/ \__,_|\___|
  
-              electrode v1.0.3
+              electrode v1.1.0
               by Chris Campbell
               Twitter: @t0x0_nz			  
 	      
@@ -22,6 +22,7 @@ Version History
 1.0.1 - 12/8/16 - Removed redundant debugging outputs. Variablised listen port. Fixed Selenium button location bug.
 1.0.2 - 15/8/16 - Checkbox interaction added.
 1.0.3 - 15/8/16 - Configurable injection mode, thread count and depth.
+1.1.0 - 10/10/16 - General tidy-up.
 
 
 License
@@ -98,7 +99,7 @@ Operation
 """""""""
 Either from the command line (as a standalone test) or as part of a Jenkins build, you can batch run the script as follows:
 
-python electrode.py %BUILD_ID%
+python run.py %BUILD_ID%
 
 %BUILD_ID% is a Jenkins environment variable. Where it is undefined a timestamp will be used.
 
