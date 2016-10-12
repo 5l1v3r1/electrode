@@ -4,6 +4,7 @@
 from selenium import webdriver
 from selenium.webdriver.common.proxy import *
 from selenium.webdriver.common.keys import Keys
+import time
 
 # Create Selenium driver.
 def createDriver(zapConfig):
@@ -48,6 +49,48 @@ def seleniumTests(driver, testConfig):
         else:
             return False
     return True
+
+# Access the target and log in.
+def prepareScan(zap, driver, baseConfig, authConfig):
+    # Access target.
+    print 'Accessing target: {0}'.format(baseConfig.target)
+    zap.urlopen(baseConfig.target)
+    driver.get(baseConfig.target)
+    # Maximise window to avoid invalid element locations.
+    driver.maximize_window()
+    # Give the new page a chance to load.
+    time.sleep(2)
+
+    # Log in to site.
+    print 'Performing login...'
+    driver.get(authConfig.loginUrl)
+    # Give the new page a chance to load.
+    time.sleep(2)
+    if elementExists(driver, authConfig.usernameText):
+        driver.find_element_by_id(authConfig.usernameText).send_keys(authConfig.username)
+    else:
+        return False
+    if elementExists(driver, authConfig.passwordText):
+        driver.find_element_by_id(authConfig.passwordText).send_keys(authConfig.password)
+    else:
+        return False
+
+    if elementExists(driver, authConfig.loginButton):
+        element = driver.find_element_by_id(authConfig.loginButton)
+        driver.execute_script("arguments[0].click();", element)
+        
+        # Give the login a chance to complete.
+        time.sleep(5)
+
+        # Ensure we've logged in.
+        if elementExists(driver, authConfig.loggedInElement):
+            print 'Login OK!'
+            return True
+        else:
+            print 'Login failed.'
+            return False
+    else:
+        return False
 
 # Check if element exists on page using Selenium.
 def elementExists(driver, id):

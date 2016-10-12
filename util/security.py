@@ -64,48 +64,6 @@ def createElectrode(zapConfig):
     return ZAPv2(proxies={'http': 'http://{0}'.format(zapConfig.url),
                 'https': 'http://{0}'.format(zapConfig.url)})
     
-# Access the target and log in.
-def prepareScan(zap, driver, baseConfig, authConfig):
-    # Access target.
-    print 'Accessing target: {0}'.format(baseConfig.target)
-    zap.urlopen(baseConfig.target)
-    driver.get(baseConfig.target)
-    # Maximise window to avoid invalid element locations.
-    driver.maximize_window()
-    # Give the new page a chance to load.
-    time.sleep(2)
-
-    # Log in to site.
-    print 'Performing login...'
-    driver.get(authConfig.loginUrl)
-    # Give the new page a chance to load.
-    time.sleep(2)
-    if element_exists(driver, authConfig.usernameText):
-        driver.find_element_by_id(authConfig.usernameText).send_keys(authConfig.username)
-    else:
-        return False
-    if element_exists(driver, authConfig.passwordText):
-        driver.find_element_by_id(authConfig.passwordText).send_keys(authConfig.password)
-    else:
-        return False
-
-    if element_exists(driver, authConfig.loginButton):
-        element = driver.find_element_by_id(authConfig.loginButton)
-        driver.execute_script("arguments[0].click();", element)
-        
-        # Give the login a chance to complete.
-        time.sleep(5)
-
-        # Ensure we've logged in.
-        if element_exists(driver, authConfig.loggedInElement):
-            print 'Login OK!'
-            return True
-        else:
-            print 'Login failed.'
-            return False
-    else:
-        return False
-
 # Spider the target to build up a sitemap.
 def spiderTarget(zap, baseConfig):
     # Spider target.

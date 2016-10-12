@@ -7,14 +7,14 @@
 #|  __/ |  __/ (__| |_| | | (_) | (_| |  __/
 # \___|_|\___|\___|\__|_|  \___/ \__,_|\___|
 #
-#              electrode v1.1.0
+#              electrode v1.1.1
 #             by Chris Campbell
 #             Twitter: @t0x0_nz	
 
-from common.config import *
-from common.crawler import *
-from common.reporting import *
-from common.security import *
+from util.config import *
+from util.crawler import createDriver, prepareScan, seleniumTests
+from util.reporting import reportResults
+from util.security import *
 from ConfigParser import SafeConfigParser
 import os
 

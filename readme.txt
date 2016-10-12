@@ -4,7 +4,7 @@
 |  __/ |  __/ (__| |_| | | (_) | (_| |  __/
  \___|_|\___|\___|\__|_|  \___/ \__,_|\___|
  
-              electrode v1.1.0
+              electrode v1.1.1
               by Chris Campbell
               Twitter: @t0x0_nz			  
 	      
@@ -23,6 +23,7 @@ Version History
 1.0.2 - 15/8/16 - Checkbox interaction added.
 1.0.3 - 15/8/16 - Configurable injection mode, thread count and depth.
 1.1.0 - 10/10/16 - General tidy-up.
+1.1.1 - 11/10/16 - Relocation of prepareScan (thanks H4bu).
 
 
 License
@@ -34,7 +35,7 @@ Requirements
 """"""""""""
 OWASP ZAP 2.5 (https://github.com/zaproxy/zaproxy/wiki/Downloads)
 Python 2.7+ (including PyPI)
-Selenium for Python 2.53.0 (pip install selenium==2.53.0)
+Selenium for Python 2.53.6 (pip install selenium==2.53.6)
 ZAP Client API for Python 2.4 (pip install python-owasp-zap-v2.4)
 Firefox 46.0
 
