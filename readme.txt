@@ -6,7 +6,7 @@
  
               electrode v1.1.1
               by Chris Campbell
-              Twitter: @t0x0_nz			  
+              Twitter: @phage_nz		  
 	      
 About
 """""

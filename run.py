@@ -9,7 +9,7 @@
 #
 #              electrode v1.1.1
 #             by Chris Campbell
-#             Twitter: @t0x0_nz	
+#             Twitter: @phage_nz	
 
 from util.config import *
 from util.crawler import createDriver, prepareScan, seleniumTests
